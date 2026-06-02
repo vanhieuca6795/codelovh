@@ -1,0 +1,38 @@
+{
+  "name": "codelo-vscode",
+  "displayName": "Codelo",
+  "description": "Trợ lý lập trình AI cho VS Code — tiếng Việt",
+  "version": "0.1.0",
+  "publisher": "vanhieuca6795",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/vanhieuca6795/codelovh" },
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Chat", "Programming Languages", "Machine Learning"],
+  "keywords": ["ai", "coding", "assistant", "vietnamese", "codelo", "deepseek"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      { "command": "codelo.chat", "title": "Codelo: Mở chat" },
+      { "command": "codelo.run", "title": "Codelo: Chạy tác vụ" },
+      { "command": "codelo.setup", "title": "Codelo: Thiết lập" }
+    ],
+    "configuration": {
+      "title": "Codelo",
+      "properties": {
+        "codelo.cliPath": { "type": "string", "default": "codelo" },
+        "codelo.language": { "type": "string", "default": "vi", "enum": ["vi", "en", "zh"] },
+        "codelo.serverPort": { "type": "number", "default": 3457 }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.4.0",
+    "vsce": "^2.15.0"
+  }
+}

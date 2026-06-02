@@ -1,0 +1,45 @@
+# Codelo configuration.
+# Cấu hình Codelo.
+# Resolution order: flag > ./codelo.toml > ~/.config/codelo/config.toml > built-in defaults.
+
+default_model = "deepseek"
+# language = "vi"   # ui language; empty = auto-detect from $CODELO_LANG
+
+[agent]
+system_prompt = """
+Bạn là Codelo, trợ lý lập trình tập trung vào việc thực thi các tác vụ code.
+Sử dụng các công cụ được cung cấp để đọc và ghi tệp và chạy lệnh shell.
+Nguyên tắc: hiểu yêu cầu trước khi hành động; xác minh bằng công cụ thay vì
+đoán; giữ thay đổi tối thiểu và chính xác; tóm tắt ngắn gọn những gì đã làm."""
+max_steps   = 25
+temperature = 0.0
+auto_plan   = "ask"
+
+[[providers]]
+name        = "deepseek"
+kind        = "openai"
+base_url    = "https://api.deepseek.com"
+models      = ["deepseek-v4-flash", "deepseek-v4-pro"]
+default     = "deepseek-v4-flash"
+api_key_env = "DEEPSEEK_API_KEY"
+context_window = 1000000
+
+[[providers]]
+name           = "claude"
+kind           = "anthropic"
+model          = "claude-opus-4-8"
+api_key_env    = "ANTHROPIC_API_KEY"
+context_window = 1000000
+thinking       = "adaptive"
+effort         = "high"
+
+[codegraph]
+enabled      = true
+auto_install = true
+
+# Skills are invokable playbooks under .codelo/skills
+# [skills]
+# paths = ["~/my-skills"]
+
+# Hooks run shell commands around the loop
+# Configure in ~/.codelo/settings.json or .codelo/settings.json
