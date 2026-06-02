@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Codelo</title>
+<style>
+:root { --bg: #0d1117; --fg: #c9d1d9; --dim: #8b949e; --accent: #58a6ff; --warn: #d29922; --err: #f85149; --green: #3fb950; --border: #30363d; --surface: #161b22; --radius: 6px; color-scheme: dark; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font: 13px/1.6 ui-monospace, "Cascadia Code", "Fira Code", Menlo, monospace; background: var(--bg); color: var(--fg); height: 100vh; display: flex; flex-direction: column; }
+#header { display: flex; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; gap: 16px; color: var(--dim); }
+#header b { color: var(--accent); }
+#stats { margin-left: auto; display: flex; gap: 12px; font-size: 11px; }
+#log { flex: 1; overflow-y: auto; padding: 12px; white-space: pre-wrap; word-break: break-word; }
+#log:empty::after { content: "Codelo sẵn sàng — nhập tin nhắn bên dưới để bắt đầu\a\aLệnh: /compact /new /resume /model /mcp /skill /help"; color: var(--dim); white-space: pre; }
+#approval { display: none; padding: 8px 12px; background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+#approval .btns { display: flex; gap: 8px; margin-top: 6px; }
+#approval button { flex: 1; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--fg); cursor: pointer; font: inherit; }
+#approval button:hover { background: var(--border); }
+#approval button.allow { border-color: var(--green); color: var(--green); }
+#approval button.allow:hover { background: #3fb95022; }
+#approval button.deny { border-color: var(--err); color: var(--err); }
+#approval button.deny:hover { background: #f8514922; }
+#bar { display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--border); }
+#in { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--fg); font: inherit; outline: none; }
+#in:focus { border-color: var(--accent); }
+#bar button { padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--fg); cursor: pointer; font: inherit; }
+#bar button:hover { background: var(--border); }
+#bar button.primary { background: var(--accent); border-color: var(--accent); color: #0d1117; font-weight: 600; }
+#bar button.primary:hover { opacity: .85; }
+.line { padding: 2px 0; }
+.user { color: var(--accent); font-weight: 600; margin-top: 8px; }
+.reason { color: var(--dim); font-style: italic; cursor: pointer; }
+.reason summary { list-style: none; display: inline; }
+.reason summary::before { content: "▼ "; color: var(--dim); }
+.reason[open] summary::before { content: "▲ "; }
+.tool { color: var(--warn); }
+.tool .name { font-weight: 600; }
+.tool_err { color: var(--err); }
+.notice { color: var(--dim); }
+.err { color: var(--err); font-weight: 600; }
+.usage { color: var(--dim); font-size: 11px; border-top: 1px dashed var(--border); margin-top: 4px; padding-top: 4px; }
+.usage .hit { color: var(--green); }
+#scroll_btn { display: none; position: fixed; bottom: 80px; right: 20px; padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--dim); cursor: pointer; font: inherit; font-size: 11px; }
+#scroll_btn:hover { background: var(--border); }
+@media (max-width: 600px) { #header { flex-wrap: wrap; gap: 8px; } #stats { gap: 8px; } }
+</style>
+</head>
+<body>
+<div id="header"><b>Codelo</b><span id="model_name">chưa kết nối</span><span id="stats"><span id="st_cost"></span><span id="st_tokens"></span></span></div>
+<div id="log"></div>
+<div id="approval"></div>
+<button id="scroll_btn" onclick="goBottom()">↓ cuối</button>
+<div id="bar">
+  <input id="in" placeholder="Nhập tin nhắn, hoặc /help để xem lệnh — Enter để gửi" autofocus />
+  <button class="primary" onclick="send()">Gửi</button>
+  <button onclick="post('/cancel')">Hủy</button>
+</div>
+<script>
+const log=document.getElementById("log"),input=document.getElementById("in"),approval=document.getElementById("approval"),scrollBtn=document.getElementById("scroll_btn"),modelName=document.getElementById("model_name"),stCost=document.getElementById("st_cost"),stTokens=document.getElementById("st_tokens")
+let asst=null,sessionCost=0,totalTokens=0,reasoningOpen=false
+function el(c,h){let d=document.createElement("div");d.className="line "+(c||"");d.innerHTML=h;log.appendChild(d);if(isNearBottom())goBottom();return d}
+function post(p,b){return fetch(p,{method:"POST",headers:{"content-type":"application/json"},body:b?JSON.stringify(b):undefined})}
+function isNearBottom(){return log.scrollHeight-log.scrollTop-log.clientHeight<120}
+function goBottom(){log.scrollTop=log.scrollHeight;scrollBtn.style.display="none"}
+log.addEventListener("scroll",()=>{scrollBtn.style.display=isNearBottom()?"none":"block"})
+function send(){let v=input.value.trim();if(!v)return;el("user","› <b>"+esc(v)+"</b>");input.value="";post("/submit",{input:v}).catch(e=>el("err","Lỗi gửi: "+e))}
+input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}})
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function showApproval(a){approval.style.display="block";approval.innerHTML='<div style="margin-bottom:4px"><b>Yêu cầu quyền:</b> '+esc(a.tool)+(a.subject?" — "+esc(a.subject):"")+'</div><div class="btns"><button class="allow" onclick="answer(true,false)">1 — Cho phép một lần</button><button class="allow" onclick="answer(true,true)">2 — Cho phép phiên này</button><button class="deny" onclick="answer(false,false)">3 — Từ chối</button></div>';let answer=(allow,session)=>{post("/approve",{id:a.id,allow,session});approval.style.display="none";document.removeEventListener("keydown",onkey)};let onkey=e=>{if(e.key==="1"||e.key==="y")answer(true,false);else if(e.key==="2"||e.key==="a")answer(true,true);else if(e.key==="3"||e.key==="n")answer(false,false)};document.addEventListener("keydown",onkey)}
+function updateStats(u){if(!u)return;totalTokens+=u.totalTokens||0;sessionCost+=u.costUsd||0;stTokens.textContent="token: "+totalTokens.toLocaleString();if(sessionCost>0){stCost.textContent="$"+sessionCost.toFixed(4);stCost.style.color=sessionCost>0.10?"var(--warn)":"var(--green)"}if(u.cacheHitTokens>0){let pct=Math.round(u.cacheHitTokens/Math.max(1,u.promptTokens)*100);stTokens.innerHTML+=' <span class="hit">cache: '+pct+'%</span>'}}
+let es=new EventSource("/events")
+es.onmessage=ev=>{let e=JSON.parse(ev.data);switch(e.kind){case"reasoning":if(!asst||asst.dataset.r){let op=reasoningOpen?" open":"";asst=el("reason","<details class='r'"+op+"><summary>đang suy nghĩ…</summary><span></span></details>");asst.dataset.r="1";reasoningOpen=true}let sp=asst.querySelector("span");if(sp)sp.textContent+=e.text;let det=asst.querySelector("details");if(det)det.open=reasoningOpen;break;case"text":if(!asst||asst.dataset.r){asst=el("","");reasoningOpen=false}asst.innerHTML+=esc(e.text);break;case"message":asst=null;reasoningOpen=false;break;case"tool_dispatch":asst=null;el("tool","→ <span class='name'>"+esc(e.tool.name)+"</span> "+(e.tool.args?esc(e.tool.args):""));break;case"tool_result":if(e.tool&&e.tool.err)el("tool_err","⊘ "+esc(e.tool.name)+" — "+esc(e.tool.err));break;case"usage":if(e.usage){let u=e.usage,t="· "+(u.totalTokens||0).toLocaleString()+" token";t+=" · vào "+(u.promptTokens||0).toLocaleString();if(u.cacheHitTokens>0)t+=" <span class='hit'>(cache: "+u.cacheHitTokens.toLocaleString()+")</span>";t+=" · ra "+(u.completionTokens||0).toLocaleString();if(u.costUsd)t+=" · $"+u.costUsd.toFixed(4);el("usage",t);updateStats(u)}break;case"notice":el(e.level==="warn"?"err":"notice",(e.level==="warn"?"⚠ ":"· ")+esc(e.text||""));break;case"phase":asst=null;el("notice","["+esc(e.text||"")+"]");break;case"approval_request":showApproval(e.approval);break;case"ask_request":if(e.ask){let qs=(e.ask.questions||[]).map(q=>"<b>"+esc(q.header||q.prompt||"")+"</b> "+(q.options||[]).map((o,i)=>(i+1)+". "+esc(o.label)).join(" · ")).join("<br>");el("notice",qs)}break;case"turn_done":asst=null;if(e.err)el("err","Lỗi: "+esc(e.err));break;case"turn_started":modelName.textContent="đang xử lý…";break;case"compaction_started":if(e.compaction)el("notice","Đang nén hội thoại…");break;case"compaction_done":if(e.compaction)el("notice","Đã nén: "+(e.compaction.messages||0)+" tin nhắn → tóm tắt");break}}
+es.onerror=()=>el("err","⚠ Mất kết nối — đang thử lại…")
+fetch("/history").then(r=>r.json()).then(ms=>{if(!ms||ms.length===0)return;ms.forEach(m=>{if(m.content)el(m.role==="user"?"user":"",(m.role==="user"?"› ":"")+esc(m.content||""))})})
+fetch("/context").then(r=>r.json()).then(c=>{if(c&&c.used)modelName.textContent=Math.round(c.used)+" token đã dùng"})
+</script>
+</body>
+</html>
